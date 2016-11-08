@@ -1,5 +1,6 @@
 package com.rocketmiles.hellochange.command;
 
+import com.rocketmiles.hellochange.Errors;
 import com.rocketmiles.hellochange.TransactionValidationException;
 import com.rocketmiles.hellochange.model.DenominationType;
 import com.rocketmiles.hellochange.model.Drawer;
@@ -11,7 +12,7 @@ import java.util.Set;
 
 public class Request {
 
-    private CommandType commandType = null;
+    private DrawerCommandType commandType = null;
     private final Map<DenominationType, Integer> valuesMap = new LinkedHashMap<>();
     private Integer changeAmount = null;
 
@@ -21,15 +22,14 @@ public class Request {
     private Request(String s) {
         String[] cmdLine = s.split(" ");
         if (!validateCommandLine(s)) {
-            throw new TransactionValidationException("Cannot read command line: " + s);
+            throw new TransactionValidationException(Errors.validationFailed);
         }
         initialize(cmdLine);
 
     }
 
     public static Request createRequestFromString(String s) {
-        Request r = new Request(s);
-        return r;
+        return new Request(s);
     }
 
     /**
@@ -37,9 +37,9 @@ public class Request {
      * @param cmdLine
      */
     private void initialize(String[] cmdLine) {
-        this.commandType = CommandType.fromString(cmdLine[0]);
-        if (commandType.equals(CommandType.CHANGE)) {
-            this.changeAmount = new Integer(cmdLine[1]);
+        this.commandType = DrawerCommandType.fromString(cmdLine[0]);
+        if (commandType.equals(DrawerCommandType.CHANGE) || commandType.equals(DrawerCommandType.CHANGEDUE)) {
+            this.changeAmount = Integer.valueOf(cmdLine[1]);
         } else if (cmdLine.length == 6) {
             valuesMap.put(DenominationType.TWENTY, new Integer(cmdLine[1]));
             valuesMap.put(DenominationType.TEN, new Integer(cmdLine[2]));
@@ -59,9 +59,11 @@ public class Request {
             return false;
         }
         String[] cmdLine = s.split(" ");
-        if (cmdLine == null || cmdLine.length < 1 || cmdLine.length > 6) {
+        if (cmdLine.length < 1 || cmdLine.length > 6) {
             return false;
         }
+        //make sure we have a sensible command
+        DrawerCommandType.fromString(cmdLine[0]);
         return true;
     }
 
@@ -80,20 +82,19 @@ public class Request {
         return valuesMap.get(d);
     }
 
-    public Command getCommand() {
+    public DrawerCommand getCommand() {
         return commandType.getCommand();
     }
 
     public String execute(Drawer d) {
-        String ret = getCommand().execute(d, this);
-        return ret;
+        return getCommand().execute(d, this);
     }
 
     Integer getChangeAmount() {
         return changeAmount;
     }
 
-    public CommandType getCommandType() {
+    public DrawerCommandType getCommandType() {
         return commandType;
     }
 }

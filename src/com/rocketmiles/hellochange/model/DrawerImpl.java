@@ -3,17 +3,15 @@ package com.rocketmiles.hellochange.model;
 import com.rocketmiles.hellochange.Errors;
 import com.rocketmiles.hellochange.TransactionValidationException;
 
-import java.util.Iterator;
-import java.util.LinkedHashMap;
-import java.util.Map;
+import java.util.*;
 
 class DrawerImpl implements Drawer {
 
-    private Map<DenominationType, Integer> contents = new LinkedHashMap<>();
-    private Map<DenominationType, Integer> contentsUpdated = new LinkedHashMap<>();
+    Map<DenominationType, Integer> contents = new LinkedHashMap<>();
+    Map<DenominationType, Integer> contentsUpdated = new LinkedHashMap<>();
 
     /**
-     * Concrete Drawer instance with ordered values in Map
+     * Concrete Drawer instance with insertion-ordered values in Map
      */
     DrawerImpl() {
         contents.put(DenominationType.TWENTY, 0);
@@ -26,7 +24,7 @@ class DrawerImpl implements Drawer {
         contentsUpdated.put(DenominationType.FIVE, 0);
         contentsUpdated.put(DenominationType.TWO, 0);
         contentsUpdated.put(DenominationType.ONE, 0);
-   }
+    }
 
     @Override
     public Drawer add(DenominationType d, Integer amt) {
@@ -55,18 +53,17 @@ class DrawerImpl implements Drawer {
         this.contentsUpdated = this.clone(contents);
     }
 
+    /**
+     * Clone operation - maintains insertion-order
+     *
+     * @param other object to clone
+     * @return
+     */
     private Map<DenominationType, Integer> clone(Map<DenominationType, Integer> other) {
         Map<DenominationType, Integer> clone = new LinkedHashMap<>();
-        clone.put(DenominationType.TWENTY,
-                other.get(DenominationType.TWENTY));
-        clone.put(DenominationType.TEN,
-                other.get(DenominationType.TEN));
-        clone.put(DenominationType.FIVE,
-                other.get(DenominationType.FIVE));
-        clone.put(DenominationType.TWO,
-                other.get(DenominationType.TWO));
-        clone.put(DenominationType.ONE,
-                other.get(DenominationType.ONE));
+        for (DenominationType d : other.keySet()) {
+            clone.put(d, other.get(d));
+        }
         return clone;
     }
 
@@ -80,13 +77,59 @@ class DrawerImpl implements Drawer {
 
     @Override
     public int totalCashValue() {
-        int totalValue = contents.get(DenominationType.TWENTY) * 20
-                + contents.get(DenominationType.TEN) * 10
-                + contents.get(DenominationType.FIVE) * 5
-                + contents.get(DenominationType.TWO) * 2
-                + contents.get(DenominationType.ONE) * 1
-                ;
-        return totalValue;
+        int accum = 0;
+        for (DenominationType d : contents.keySet()) {
+            accum += contents.get(d) * d.getIntValue();
+        }
+        return accum;
+    }
+
+    /**
+     * Calculates what change can be made for this amount
+     * commits changes if commit is TRUE
+     *
+     * @param changeAmount the desired amount of change total
+     * @return insertion-ordered set of bill counts per denomination
+     */
+    @Override
+    public Collection<Integer> changeDue(Integer changeAmount, boolean commit) {
+        if (this.totalCashValue() < changeAmount) {
+            //not enough money in drawer
+            throw new TransactionValidationException(Errors.cantMakeChange);
+        }
+        //start with largest denominations and work down.
+        //track the amount obtained and count down toward zero (done)
+        int countDown = changeAmount;
+        Collection<Integer> fistFullOfDollars = new ArrayList<>();
+        for (DenominationType d : contentsUpdated.keySet()) {
+            //see if there's any money in drawer of this denomination
+            //OR we've reached our goal
+            if (d.getIntValue() == 0 || countDown == 0) {
+                fistFullOfDollars.add(0);
+                continue;
+            }
+
+            int billsNeeded = countDown / d.getIntValue();
+            int billsInDrawer = contentsUpdated.get(d);
+            if (billsInDrawer < billsNeeded) {
+                billsNeeded = billsInDrawer;
+            }
+            countDown -= billsNeeded * d.getIntValue();
+            fistFullOfDollars.add(billsNeeded);
+            this.subtract(d, billsNeeded);
+        }
+        if (countDown > 0) {
+            //not the right combination of denominations in drawer
+            this.cancel();
+            throw new TransactionValidationException(Errors.cantMakeChange);
+        }
+        //commit the change if requested, otherwise cancel to reset the state
+        if (commit) {
+            this.commit();
+        } else {
+            this.cancel();
+        }
+        return fistFullOfDollars;
     }
 
     @Override

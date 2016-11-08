@@ -1,6 +1,6 @@
 package com.rocketmiles.hellochange;
 
-import com.rocketmiles.hellochange.command.CommandType;
+import com.rocketmiles.hellochange.command.DrawerCommandType;
 import com.rocketmiles.hellochange.command.Request;
 import com.rocketmiles.hellochange.model.Drawer;
 import com.rocketmiles.hellochange.model.DrawerBuilder;
@@ -13,14 +13,14 @@ public class CashRegister {
 
     private final Drawer drawer;
 
-    private CashRegister() {
-        this.drawer = DrawerBuilder.createDrawer();
+    CashRegister() {
+        this.drawer = DrawerBuilder.buildDrawer();
     }
 
     public static void main(String[] args) {
         CashRegister register = new CashRegister();
         // create a scanner so we can read the command-line input
-        Scanner scanner = new Scanner(System.in);
+        Scanner scanner = new Scanner(System.in, "UTF8");
 
         System.out.println("ready");
 
@@ -35,18 +35,16 @@ public class CashRegister {
                     String displayResult = register.handle(request);
                     System.out.println(displayResult);
                     //catch the quit command here to exit nicely
-                    if (request.getCommandType().equals(CommandType.QUIT)) {
+                    if (request.getCommandType().equals(DrawerCommandType.QUIT)) {
                         exit(0);
                     }
                 } catch (TransactionValidationException tve) {
-                    System.out.println(Errors.validationFailed);
+                    System.out.println(tve.getMessage());
                 } catch (IllegalArgumentException iae) {
                     System.out.println(Errors.parseCommandFailed);
                 }
             }
-        } catch (Exception e)
-
-        {
+        } catch (Exception e) {
             e.printStackTrace();
             System.out.println(Errors.exceptionOccurred);
             exit(1);
@@ -54,13 +52,8 @@ public class CashRegister {
 
     }
 
-    private String handle(Request r) {
-        try {
-            String retStr = r.execute(drawer);
-            return retStr;
-        } catch (IllegalArgumentException e) {
-            return e.getMessage();
-        }
+    String handle(Request r) {
+        return r.execute(drawer);
     }
 
 }

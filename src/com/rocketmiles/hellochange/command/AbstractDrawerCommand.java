@@ -2,7 +2,7 @@ package com.rocketmiles.hellochange.command;
 
 import com.rocketmiles.hellochange.model.Drawer;
 
-abstract class AbstractCommand implements Command {
+abstract class AbstractDrawerCommand implements DrawerCommand {
 
     /**
      * This returns a result string that includes the total in the drawer

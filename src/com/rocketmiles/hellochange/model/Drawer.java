@@ -1,5 +1,7 @@
 package com.rocketmiles.hellochange.model;
 
+import java.util.Collection;
+
 public interface Drawer {
 
     /**
@@ -28,6 +30,8 @@ public interface Drawer {
     Drawer commit();
 
     int totalCashValue();
+
+    Collection<Integer> changeDue(Integer changeAmount, boolean commit);
 
     String drawerContentsStr(String delimiter);
 
